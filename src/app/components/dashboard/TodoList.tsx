@@ -1,12 +1,11 @@
-// dashboard/TodoList.tsx
 import React from 'react';
 import { Todo } from '../../Types/types';
 import TodoItem from './TodoItem';
 
 interface TodoListProps {
   todos: Todo[];
-  handleToggleTodo: (id: number) => void;
-  handleDeleteTodo: (id: number) => void;
+  handleToggleTodo: (id: string) => void | Promise<void>;
+  handleDeleteTodo: (id: string) => void | Promise<void>;
 }
 
 const TodoList: React.FC<TodoListProps> = ({ 
@@ -15,7 +14,7 @@ const TodoList: React.FC<TodoListProps> = ({
   handleDeleteTodo 
 }) => {
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-3">
       {todos.map(todo => (
         <TodoItem 
           key={todo.id}

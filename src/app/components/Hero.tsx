@@ -2,8 +2,15 @@
 
 import React from 'react';
 import { CheckCircle, Clock, Calendar, BarChart2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const Hero1: React.FC = () => {
+  const router = useRouter();
+  
+  const handleGetStarted = () => {
+    router.push('/todoapp');
+  };
+
   return (
     <div className="relative pt-32 pb-32 flex content-center items-center justify-center min-h-screen overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
@@ -39,7 +46,10 @@ const Hero1: React.FC = () => {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fadeIn" style={{ animationDelay: '0.4s' }}>
-              <button className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-size-200 text-white font-semibold rounded-full hover:bg-pos-100 transition-all duration-500 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/25">
+              <button 
+                onClick={handleGetStarted}
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-size-200 text-white font-semibold rounded-full hover:bg-pos-100 transition-all duration-500 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/25"
+              >
                 Get Started
               </button>
               <button className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-full hover:bg-white/20 transition-all duration-300 hover:scale-105">

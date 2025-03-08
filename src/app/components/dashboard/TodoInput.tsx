@@ -1,6 +1,3 @@
-"use client";
-
-// dashboard/TodoInput.tsx
 import React from 'react';
 import { PlusCircle } from 'lucide-react';
 
@@ -17,18 +14,20 @@ const TodoInput: React.FC<TodoInputProps> = ({
 }) => {
   return (
     <form onSubmit={handleAddTodo} className="mb-8">
-      <div className="flex items-center bg-gray-800 rounded-lg overflow-hidden">
-        <PlusCircle size={20} className="ml-3 text-gray-400" />
+      <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden border border-white/10 focus-within:border-indigo-500 transition-all duration-300">
+        <div className="p-3 bg-white/5">
+          <PlusCircle size={20} className="text-indigo-400" />
+        </div>
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Add a task..."
-          className="w-full p-3 bg-gray-800 text-white placeholder-gray-500 focus:outline-none"
+          placeholder="Add a new task..."
+          className="flex-grow p-3 bg-transparent text-white placeholder-gray-400 focus:outline-none"
         />
         <button 
           type="submit" 
-          className="px-4 py-3 bg-gray-700 text-white"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
         >
           Add
         </button>
