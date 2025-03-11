@@ -1,10 +1,12 @@
 export interface Todo {
-  id: string; // Changed from number to string to match Firestore document IDs
+  id: string;
   text: string;
   completed: boolean;
   createdAt: Date;
   priority: number;
   userId: string;
+  project?: string;
+  deadline?: Date;  // Add deadline field
 }
 
-export type ViewType = 'inbox' | 'today' | 'important' | 'completed';
+export type ViewType = 'inbox' | 'today' | 'important' | 'completed' | 'upcoming' | string;

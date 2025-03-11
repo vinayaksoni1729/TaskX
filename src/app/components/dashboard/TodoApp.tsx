@@ -50,6 +50,7 @@ const TodoApp: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [onLoginPage, setOnLoginPage] = useState(false);
+  const [activeProject, setActiveProject] = useState<string | null>(null);
 
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -59,6 +60,8 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, []);
+
+
 
 useEffect(() => {
   if (!user) return;
@@ -75,7 +78,11 @@ useEffect(() => {
           ? data.createdAt 
           : new Date(data.createdAt?.seconds * 1000 || Date.now()),
         priority: data.priority || 4,
-        userId: data.userId || user.uid
+        userId: data.userId || user.uid,
+        project: data.project || undefined,
+        deadline: data.deadline 
+          ? new Date(data.deadline.seconds * 1000) 
+          : undefined
       } as Todo;
     });
 
@@ -85,25 +92,61 @@ useEffect(() => {
   return () => unsubscribe();
 }, [user]);
 
-  const handleAddTodo = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (inputValue.trim() === '' || !user) return;
+const handleAddTodo = async (e: React.FormEvent, deadline?: Date): Promise<void> => {
+  e.preventDefault();
+  if (inputValue.trim() === '' || !user) return;
 
-    const newTodo: Omit<Todo, 'id'> = {
-      text: inputValue.trim(),
-      completed: false,
-      createdAt: new Date(),
-      priority: 4,
-      userId: user.uid
-    };
+  // Determine project based on active view
+  let project = null;
+  if (activeView === 'project-personal') project = 'Personal';
+  if (activeView === 'project-work') project = 'Work';
 
-    try {
-      await addDoc(collection(firestore, 'todos'), newTodo);
-      setInputValue('');
-    } catch (error) {
-      console.error("Error adding todo: ", error);
-    }
+  // Create the base todo object
+  const newTodo: any = {
+    text: inputValue.trim(),
+    completed: false,
+    createdAt: new Date(),
+    priority: 4,
+    userId: user.uid
   };
+  
+  if (project) {
+    newTodo.project = project;
+  }
+  
+  if (deadline) {
+    newTodo.deadline = deadline;
+  }
+
+  try {
+    await addDoc(collection(firestore, 'todos'), newTodo);
+    setInputValue('');
+  } catch (error) {
+    console.error("Error adding todo: ", error);
+  }
+};
+
+const handleUpdatePriority = async (id: string, priority: number): Promise<void> => {
+  if (!user) return;
+
+  const todoRef = doc(firestore, 'todos', id);
+  try {
+    await updateDoc(todoRef, { priority });
+  } catch (error) {
+    console.error("Error updating todo priority: ", error);
+  }
+};
+
+const handleUpdateProject = async (id: string, project: string): Promise<void> => {
+  if (!user) return;
+
+  const todoRef = doc(firestore, 'todos', id);
+  try {
+    await updateDoc(todoRef, { project });
+  } catch (error) {
+    console.error("Error updating todo project: ", error);
+  }
+};
 
   const handleToggleTodo = async (id: string): Promise<void> => {
     if (!user) return;
@@ -132,19 +175,43 @@ useEffect(() => {
     }
   };
 
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
-  };
+const isToday = (date: Date): boolean => {
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+};
 
-  const filteredTodos = todos.filter(todo => {
-    if (activeView === 'today') return isToday(todo.createdAt);
-    if (activeView === 'important') return todo.priority <= 2;
-    if (activeView === 'completed') return todo.completed;
-    return true;
-  });
+const isUpcoming = (todo: Todo): boolean => {
+  if (!todo.deadline) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return todo.deadline >= today && !isToday(todo.deadline);
+};
+
+const filteredTodos = todos.filter(todo => {
+  // Filter by view type
+  if (activeView === 'today') return isToday(todo.createdAt) || (todo.deadline ? isToday(todo.deadline) : false);
+  if (activeView === 'important') return todo.priority <= 2;
+  if (activeView === 'completed') return todo.completed;
+  if (activeView === 'upcoming') return isUpcoming(todo);
+  
+  if (activeView === 'project-personal') return todo.project === 'Personal';
+  if (activeView === 'project-work') return todo.project === 'Work';
+  
+  return true;
+});
+
+const handleEditTodo = async (id: string, newText: string): Promise<void> => {
+  if (!user) return;
+
+  const todoRef = doc(firestore, 'todos', id);
+  try {
+    await updateDoc(todoRef, { text: newText });
+  } catch (error) {
+    console.error("Error updating todo: ", error);
+  }
+};
 
   if (!user || onLoginPage) {
     return <LoginPage />;
@@ -193,9 +260,11 @@ useEffect(() => {
 
             {filteredTodos.length > 0 ? (
               <TodoList 
-                todos={filteredTodos}
-                handleToggleTodo={handleToggleTodo}
-                handleDeleteTodo={handleDeleteTodo}
+              todos={filteredTodos}
+              handleToggleTodo={handleToggleTodo}
+              handleDeleteTodo={handleDeleteTodo}
+              handleUpdatePriority={handleUpdatePriority}
+              handleUpdateProject={handleUpdateProject}
               />
             ) : (
               <EmptyState />
