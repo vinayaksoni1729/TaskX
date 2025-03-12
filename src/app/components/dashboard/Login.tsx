@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   GoogleAuthProvider, 
   signInWithPopup,
-  UserCredential
+  UserCredential,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -21,9 +22,48 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showTooltip, setShowTooltip] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const auth = getAuth();
   const db = getFirestore();
+
+  // Check if user is already authenticated when component mounts
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    });
+
+    // Clean up subscription on unmount
+    return () => unsubscribe();
+  }, [auth]);
+
+  // Skip rendering the login form if user is already authenticated
+  if (isAuthenticated && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-sm p-8 rounded-xl w-full max-w-md shadow-lg text-center">
+          <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600">
+            You are already logged in
+          </h2>
+          <p className="text-gray-400 mt-4">
+            You're already authenticated and can access the application.
+          </p>
+          <button 
+            onClick={() => auth.signOut()}
+            className="mt-6 p-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white rounded-lg hover:opacity-90 transition-all transform hover:scale-[1.02] font-medium"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const saveUserToFirestore = async (userCredential: UserCredential, provider: string) => {
     const user = userCredential.user;
@@ -56,6 +96,7 @@ const LoginPage: React.FC = () => {
       } else {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
+      setIsAuthenticated(true);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
         setError('Account not found. Need to sign up?');
@@ -74,6 +115,7 @@ const LoginPage: React.FC = () => {
     try {
       const userCredential = await signInWithPopup(auth, provider);
       await saveUserToFirestore(userCredential, "google");
+      setIsAuthenticated(true);
     } catch (error: any) {
       setError(error.message);
     }
@@ -95,6 +137,15 @@ const LoginPage: React.FC = () => {
       checkPasswordStrength(newPassword);
     }
   };
+
+  // Show loading indicator while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black flex items-center justify-center p-4">
