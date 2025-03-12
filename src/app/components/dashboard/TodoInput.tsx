@@ -7,34 +7,46 @@ import {
   Star,
   X,
   Clock,
+  Check,
+  Terminal
 } from "lucide-react";
+import * as chrono from "chrono-node";
 
 interface TodoInputProps {
-  inputValue: string;
-  setInputValue: (value: string) => void;
-  handleAddTodo: (
-    e: React.FormEvent,
-    deadline?: Date,
-    priority?: number,
-    project?: string
-  ) => void;
+  showTaskInput: boolean;
+  setShowTaskInput: (show: boolean) => void;
+  handleAddTodo: (taskTitle: string, deadline: string, recurring?: string) => void;
+}
+
+// Define the interface for our parsed preview
+interface ParsedPreview {
+  title: string;
+  date: string;
+  recurring?: string;
 }
 
 const TodoInput: React.FC<TodoInputProps> = ({
-  inputValue,
-  setInputValue,
+  showTaskInput,
+  setShowTaskInput,
   handleAddTodo,
 }) => {
+  const [nlpMode, setNlpMode] = useState<boolean>(true);
+  const [userInput, setUserInput] = useState("");
+  const [parsedPreview, setParsedPreview] = useState<ParsedPreview | null>(null);
+  
+  // State for traditional input mode
+  const [inputValue, setInputValue] = useState("");
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [priority, setPriority] = useState<number>(4);
   const [project, setProject] = useState<string | null>(null);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -57,11 +69,113 @@ const TodoInput: React.FC<TodoInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expanded]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Recognizing recurring task patterns
+  const recurringPatterns: { [key: string]: string } = {
+    "every day": "daily",
+    "everyday": "daily",
+    "daily": "daily",
+    "every week": "weekly",
+    "weekly": "weekly",
+    "every month": "monthly",
+    "monthly": "monthly",
+    "every year": "yearly",
+    "yearly": "yearly",
+    "every monday": "weekly",
+    "every tuesday": "weekly",
+    "every wednesday": "weekly",
+    "every thursday": "weekly",
+    "every friday": "weekly",
+    "every saturday": "weekly",
+    "every sunday": "weekly",
+  };
+
+  // Update preview as user types
+  const updatePreview = (input: string) => {
+    if (!input.trim()) {
+      setParsedPreview(null);
+      return;
+    }
+
+    // Process input to detect task and date
+    const processedInput = processInput(input);
+    setParsedPreview(processedInput);
+  };
+
+  const processInput = (input: string): ParsedPreview => {
+    let detectedRecurring = "";
+    let textWithoutRecurring = input;
+  
+    for (const pattern in recurringPatterns) {
+      if (input.toLowerCase().includes(pattern)) {
+        detectedRecurring = recurringPatterns[pattern];
+        textWithoutRecurring = input.toLowerCase().replace(pattern, "").trim();
+        break;
+      }
+    }
+  
+    const refDate = new Date();
+    const parsedResults = chrono.parse(textWithoutRecurring, refDate);
+  
+    if (parsedResults.length === 0) {
+      return { title: input, date: "", recurring: detectedRecurring };
+    }
+  
+    const dateResult = parsedResults[0];
+    const dateText = dateResult.text;
+    let parsedDate = dateResult.start.date();
+  
+    // Ensure correct weekday parsing
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const lowerInput = textWithoutRecurring.toLowerCase();
+    const weekdays = [
+      { name: "sunday", index: 0 },
+      { name: "monday", index: 1 },
+      { name: "tuesday", index: 2 },
+      { name: "wednesday", index: 3 },
+      { name: "thursday", index: 4 },
+      { name: "friday", index: 5 },
+      { name: "saturday", index: 6 },
+    ];
+  
+    for (const day of weekdays) {
+      if (lowerInput.includes(day.name)) {
+        let daysToAdd = (day.index - dayOfWeek + 7) % 7;
+  
+        // Ensure we never go backwards in time
+        if (daysToAdd === 0 && parsedDate < today) {
+          daysToAdd = 7; // Move to next week's occurrence
+        }
+  
+        parsedDate = new Date(today);
+        parsedDate.setDate(today.getDate() + daysToAdd);
+  
+        // Preserve the parsed time (e.g., 3 PM stays 3 PM)
+        parsedDate.setHours(
+          dateResult.start.get("hour") ?? 9, // Default to 9 AM if no time is given
+          dateResult.start.get("minute") ?? 0,
+          0,
+          0
+        );
+        break;
+      }
+    }
+  
+    const formattedDate = parsedDate.toISOString();
+    let taskTitle = textWithoutRecurring.replace(dateText, "").trim();
+  
+    return {
+      title: taskTitle,
+      date: formattedDate,
+      recurring: detectedRecurring || undefined,
+    };
+  };
+
+  const handleSubmitTraditional = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() === "") return;
 
-    handleAddTodo(e, deadline || undefined, priority, project || undefined);
+    handleAddTodo(inputValue, deadline ? deadline.toISOString() : "", project || undefined);
     setInputValue("");
     setDeadline(null);
     setPriority(4);
@@ -69,6 +183,37 @@ const TodoInput: React.FC<TodoInputProps> = ({
     setShowDeadlinePicker(false);
     setShowProjectDropdown(false);
     setExpanded(false);
+    setShowTaskInput(false);
+  };
+
+  const handleSubmitNLP = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInput.trim()) return;
+
+    const processed = processInput(userInput);
+    
+    if (!processed.title) return;
+
+    handleAddTodo(processed.title, processed.date, processed.recurring);
+    setUserInput(""); // Reset input field
+    setParsedPreview(null);
+    setShowTaskInput(false); // Hide input after adding task
+  };
+
+  // For debugging - show the parsed result to the user
+  const formatPreviewDate = (dateString: string) => {
+    if (!dateString) return "No date specified";
+    
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    });
   };
 
   const getPriorityColor = (level: number) => {
@@ -111,26 +256,132 @@ const TodoInput: React.FC<TodoInputProps> = ({
     }
   };
 
+  if (!showTaskInput) {
+    return (
+      <div className="mb-8 flex">
+        <button
+          onClick={() => setShowTaskInput(true)}
+          className="flex items-center px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium transition-all duration-200 rounded-lg shadow-lg shadow-indigo-500/30"
+        >
+          <PlusCircle size={18} className="mr-2" />
+          Add New Task
+        </button>
+      </div>
+    );
+  }
+
+  // NLP Input Mode
+  if (nlpMode) {
+    return (
+      <div className="mb-8 max-w-3xl mx-auto">
+        <div className="flex gap-2 mb-2">
+          <button 
+            className="bg-indigo-600 text-white px-3 py-1 rounded-t-lg font-medium"
+            onClick={() => setNlpMode(true)}
+          >
+            Natural Language
+          </button>
+          <button 
+            className="bg-gray-700 text-gray-300 px-3 py-1 rounded-t-lg font-medium hover:bg-gray-600"
+            onClick={() => setNlpMode(false)}
+          >
+            Standard Input
+          </button>
+        </div>
+        <form 
+          onSubmit={handleSubmitNLP} 
+          className="bg-gray-900 rounded-xl border border-indigo-500/30 shadow-lg shadow-indigo-500/20 p-4"
+        >
+          <div className="flex items-center mb-3">
+            <Terminal size={18} className="text-indigo-400 mr-2" />
+            <span className="text-gray-300 text-sm">Enter task with date & time</span>
+          </div>
+          
+          <input
+            type="text"
+            value={userInput}
+            onChange={(e) => {
+              setUserInput(e.target.value);
+              updatePreview(e.target.value);
+            }}
+            placeholder="E.g. 'Doctor appointment monday at 1pm'"
+            className="w-full p-3 border border-gray-700 rounded-lg text-white bg-gray-800 mb-3 focus:outline-none focus:border-indigo-500"
+            autoFocus
+          />
+          
+          {/* Preview parsed task */}
+          {parsedPreview && parsedPreview.title && (
+            <div className="text-sm bg-gray-800 p-3 rounded-lg border border-gray-700 mb-3">
+              <div className="text-indigo-300 font-medium mb-1">Preview:</div>
+              <p><span className="text-gray-400">Task:</span> {parsedPreview.title}</p>
+              {parsedPreview.date && (
+                <p><span className="text-gray-400">When:</span> {formatPreviewDate(parsedPreview.date)}</p>
+              )}
+              {parsedPreview.recurring && (
+                <p><span className="text-gray-400">Repeats:</span> {parsedPreview.recurring}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium transition-all duration-200 rounded-lg shadow-md"
+            >
+              Save Task
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowTaskInput(false);
+                setUserInput("");
+                setParsedPreview(null);
+              }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium transition-all duration-200 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // Traditional Input Mode
   return (
-    <div className="mb-8 transform transition-all duration-300 hover:shadow-lg">
+    <div className="mb-8 max-w-3xl mx-auto">
+      <div className="flex gap-2 mb-2">
+        <button 
+          className="bg-gray-700 text-gray-300 px-3 py-1 rounded-t-lg font-medium hover:bg-gray-600"
+          onClick={() => setNlpMode(true)}
+        >
+          Natural Language
+        </button>
+        <button 
+          className="bg-indigo-600 text-white px-3 py-1 rounded-t-lg font-medium"
+          onClick={() => setNlpMode(false)}
+        >
+          Standard Input
+        </button>
+      </div>
       <form
         ref={formRef}
-        onSubmit={handleSubmit}
-        className={`bg-gray-800/60 backdrop-blur-lg rounded-xl overflow-hidden border ${
+        onSubmit={handleSubmitTraditional}
+        className={`bg-gray-900 rounded-xl border ${
           expanded
-            ? "border-indigo-500/50 shadow-md shadow-indigo-500/10"
-            : "border-gray-700/50"
-        } transition-all duration-200`}
+            ? "border-indigo-500/50 shadow-lg shadow-indigo-500/20"
+            : "border-gray-800"
+        } transition-all duration-300 transform ${expanded ? "scale-102" : ""}`}
       >
         <div className="flex items-center">
           <div
-            className={`p-4 ${
-              expanded
-                ? "bg-indigo-600/30 text-indigo-300"
-                : "bg-indigo-500/20 text-indigo-400"
-            } transition-colors duration-200`}
+            className="p-4 text-indigo-400 transition-colors duration-200 hover:text-indigo-300 cursor-pointer"
+            onClick={() => {
+              inputRef.current?.focus();
+              setExpanded(true);
+            }}
           >
-            <PlusCircle size={20} />
+            <PlusCircle size={22} className="stroke-[1.5px]" />
           </div>
           <input
             ref={inputRef}
@@ -138,19 +389,19 @@ const TodoInput: React.FC<TodoInputProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Add a new task..."
-            className="flex-grow p-4 bg-transparent text-white placeholder-gray-400 focus:outline-none text-lg"
+            className="flex-grow p-4 bg-transparent text-white placeholder-gray-400 focus:outline-none text-lg font-medium"
             onFocus={() => setExpanded(true)}
           />
           <button
             type="submit"
-            className={`px-6 py-4 ${
+            className={`px-8 py-2 ${
               inputValue.trim()
-                ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white"
-                : "bg-gray-700/50 text-gray-400 cursor-not-allowed"
-            } font-medium hover:opacity-90 transition-all duration-200`}
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white"
+                : "bg-gray-800 text-gray-500 cursor-not-allowed"
+            } font-medium transition-all duration-200 rounded-l-full`}
             disabled={!inputValue.trim()}
           >
-            Add
+            {inputValue.trim() ? <Check className="stroke-[2px]" /> : "Add"}
           </button>
         </div>
 

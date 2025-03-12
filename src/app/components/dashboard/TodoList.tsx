@@ -25,7 +25,6 @@ const TodoList: React.FC<TodoListProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [filterCompleted, setFilterCompleted] = useState<boolean | null>(null);
   
-  // Handle sorting
   const handleSort = (field: string) => {
     if (sortBy === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
