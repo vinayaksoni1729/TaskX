@@ -37,8 +37,6 @@ const firebaseConfig = {
   measurementId: "G-3WHTR3E4VQ"
 };
 
-
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
@@ -51,6 +49,7 @@ const TodoApp: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [onLoginPage, setOnLoginPage] = useState(false);
   const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [showTaskInput, setShowTaskInput] = useState<boolean>(false); // Add this state
 
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -60,8 +59,6 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, []);
-
-
 
 useEffect(() => {
   if (!user) return;
@@ -82,7 +79,8 @@ useEffect(() => {
         project: data.project || undefined,
         deadline: data.deadline 
           ? new Date(data.deadline.seconds * 1000) 
-          : undefined
+          : undefined,
+        recurring: data.recurring || undefined // Add support for recurring tasks
       } as Todo;
     });
 
@@ -92,9 +90,9 @@ useEffect(() => {
   return () => unsubscribe();
 }, [user]);
 
-const handleAddTodo = async (e: React.FormEvent, deadline?: Date): Promise<void> => {
-  e.preventDefault();
-  if (inputValue.trim() === '' || !user) return;
+// Update this function to handle the new TodoInput component
+const handleAddTodo = async (taskTitle: string, deadline: string, recurring?: string): Promise<void> => {
+  if (taskTitle.trim() === '' || !user) return;
 
   // Determine project based on active view
   let project = null;
@@ -103,7 +101,7 @@ const handleAddTodo = async (e: React.FormEvent, deadline?: Date): Promise<void>
 
   // Create the base todo object
   const newTodo: any = {
-    text: inputValue.trim(),
+    text: taskTitle.trim(),
     completed: false,
     createdAt: new Date(),
     priority: 4,
@@ -115,7 +113,11 @@ const handleAddTodo = async (e: React.FormEvent, deadline?: Date): Promise<void>
   }
   
   if (deadline) {
-    newTodo.deadline = deadline;
+    newTodo.deadline = new Date(deadline);
+  }
+
+  if (recurring) {
+    newTodo.recurring = recurring;
   }
 
   try {
@@ -245,16 +247,21 @@ const handleEditTodo = async (id: string, newText: string): Promise<void> => {
               <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600">
                 {activeView === 'inbox' ? 'Inbox' : 
                 activeView === 'today' ? 'Today' : 
-                activeView === 'important' ? 'Important' : 'Completed'}
+                activeView === 'important' ? 'Important' : 
+                activeView === 'upcoming' ? 'Upcoming' :
+                activeView === 'completed' ? 'Completed' :
+                activeView === 'project-personal' ? 'Personal' :
+                activeView === 'project-work' ? 'Work' : 'All Tasks'}
               </h2>
               <div className="text-sm text-gray-400">
                 {filteredTodos.length} Tasks
               </div>
             </div>
 
+            {/* Replace the old TodoInput with your new one */}
             <TodoInput 
-              inputValue={inputValue}
-              setInputValue={setInputValue}
+              showTaskInput={showTaskInput}
+              setShowTaskInput={setShowTaskInput}
               handleAddTodo={handleAddTodo}
             />
 
