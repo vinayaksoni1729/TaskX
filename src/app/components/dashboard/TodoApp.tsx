@@ -37,6 +37,8 @@ const firebaseConfig = {
   measurementId: "G-3WHTR3E4VQ"
 };
 
+
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
@@ -49,7 +51,7 @@ const TodoApp: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [onLoginPage, setOnLoginPage] = useState(false);
   const [activeProject, setActiveProject] = useState<string | null>(null);
-  const [showTaskInput, setShowTaskInput] = useState<boolean>(false); // Add this state
+  const [showTaskInput, setShowTaskInput] = useState<boolean>(false);
 
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -80,7 +82,7 @@ useEffect(() => {
         deadline: data.deadline 
           ? new Date(data.deadline.seconds * 1000) 
           : undefined,
-        recurring: data.recurring || undefined // Add support for recurring tasks
+        recurring: data.recurring || undefined
       } as Todo;
     });
 
@@ -90,41 +92,91 @@ useEffect(() => {
   return () => unsubscribe();
 }, [user]);
 
-// Update this function to handle the new TodoInput component
-const handleAddTodo = async (taskTitle: string, deadline: string, recurring?: string): Promise<void> => {
-  if (taskTitle.trim() === '' || !user) return;
+// Updated method to handle both input styles
+const handleAddTodo = async (
+  taskTitleOrEvent: string | React.FormEvent, 
+  deadlineOrPriority?: Date | string | number,
+  priorityOrProject?: number | string,
+  project?: string
+): Promise<void> => {
+  // If we're handling the new-style call (from the NLP input)
+  if (typeof taskTitleOrEvent === 'string' && (typeof deadlineOrPriority === 'string' || deadlineOrPriority === undefined)) {
+    const taskTitle = taskTitleOrEvent;
+    const deadline = deadlineOrPriority as string;
+    const recurring = priorityOrProject as string;
+    
+    if (taskTitle.trim() === '' || !user) return;
 
-  // Determine project based on active view
-  let project = null;
-  if (activeView === 'project-personal') project = 'Personal';
-  if (activeView === 'project-work') project = 'Work';
+    // Determine project based on active view
+    let todoProject = null;
+    if (activeView === 'project-personal') todoProject = 'Personal';
+    if (activeView === 'project-work') todoProject = 'Work';
+    
+    // Create the base todo object
+    const newTodo: any = {
+      text: taskTitle.trim(),
+      completed: false,
+      createdAt: new Date(),
+      priority: 4,
+      userId: user.uid
+    };
+    
+    if (todoProject) {
+      newTodo.project = todoProject;
+    }
+    
+    if (deadline) {
+      newTodo.deadline = new Date(deadline);
+    }
 
-  // Create the base todo object
-  const newTodo: any = {
-    text: taskTitle.trim(),
-    completed: false,
-    createdAt: new Date(),
-    priority: 4,
-    userId: user.uid
-  };
-  
-  if (project) {
-    newTodo.project = project;
-  }
-  
-  if (deadline) {
-    newTodo.deadline = new Date(deadline);
-  }
+    if (recurring) {
+      newTodo.recurring = recurring;
+    }
 
-  if (recurring) {
-    newTodo.recurring = recurring;
-  }
+    try {
+      await addDoc(collection(firestore, 'todos'), newTodo);
+      setInputValue('');
+    } catch (error) {
+      console.error("Error adding todo: ", error);
+    }
+  } 
+  // If we're handling the original-style call
+  else if (typeof taskTitleOrEvent === 'object') {
+    const e = taskTitleOrEvent as React.FormEvent;
+    const deadline = deadlineOrPriority as Date | undefined;
+    const priority = priorityOrProject as number | undefined;
+    const todoProject = project;
+    
+    e.preventDefault();
+    if (inputValue.trim() === '' || !user) return;
 
-  try {
-    await addDoc(collection(firestore, 'todos'), newTodo);
-    setInputValue('');
-  } catch (error) {
-    console.error("Error adding todo: ", error);
+    // Create the base todo object
+    const newTodo: any = {
+      text: inputValue.trim(),
+      completed: false,
+      createdAt: new Date(),
+      priority: priority || 4,
+      userId: user.uid
+    };
+    
+    if (todoProject) {
+      newTodo.project = todoProject;
+    } else if (activeView === 'project-personal') {
+      newTodo.project = 'Personal';
+    } else if (activeView === 'project-work') {
+      newTodo.project = 'Work';
+    }
+    
+    if (deadline) {
+      newTodo.deadline = deadline;
+    }
+
+    try {
+      await addDoc(collection(firestore, 'todos'), newTodo);
+      setInputValue('');
+    } catch (error) {
+      console.error("Error adding todo: ", error);
+    }
   }
 };
 
@@ -258,7 +310,7 @@ const handleEditTodo = async (id: string, newText: string): Promise<void> => {
               </div>
             </div>
 
-            {/* Replace the old TodoInput with your new one */}
+            {/* New natural language TodoInput */}
             <TodoInput 
               showTaskInput={showTaskInput}
               setShowTaskInput={setShowTaskInput}
