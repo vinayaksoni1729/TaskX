@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
-import { db } from "./fireBaseAdmin";
+
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
+    });
+  } catch (error) {
+    console.error("Firebase initialization error:", error);
+    throw error;
+  }
+}
+
+const db = admin.firestore();
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Use Gmail App Password
+    pass: process.env.EMAIL_PASS, 
   },
 });
 
-// Function to fetch and send reminders
 const sendReminders = async () => {
   const now = new Date();
   const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
@@ -24,13 +39,11 @@ const sendReminders = async () => {
 
   if (snapshot.empty) return { success: true, message: "No tasks due in the next 10 minutes." };
 
-  // Process tasks
   const emails: Promise<any>[] = [];
   snapshot.forEach((doc) => {
     const task = doc.data();
     if (!task.userEmail) return;
 
-    // Email configuration
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: task.userEmail,
@@ -41,11 +54,10 @@ const sendReminders = async () => {
     emails.push(transporter.sendMail(mailOptions));
   });
 
-  await Promise.all(emails); // Send all emails
+  await Promise.all(emails); 
   return { success: true, message: "Reminders sent!" };
 };
 
-// API Route (Next.js App Router Format)
 export async function GET(req: NextRequest) {
   try {
     const response = await sendReminders();
