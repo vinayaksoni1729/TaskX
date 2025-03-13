@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
 
-// 🔥 Initialize Firebase Admin SDK (Only once)
 if (!admin.apps.length) {
   try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -18,15 +17,14 @@ if (!admin.apps.length) {
     console.log("Firebase admin initialized successfully");
   } catch (error) {
     console.error("Firebase initialization error:", error);
-    throw error; // Re-throw to make sure the error is properly handled
+    throw error;
   }
 }
 
 const db = admin.firestore();
 
-// 📧 Configure Nodemailer
 const transporter = nodemailer.createTransport({
-  service: "gmail", // Change this if using another provider
+  service: "gmail", 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
