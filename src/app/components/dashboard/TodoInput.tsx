@@ -18,11 +18,10 @@ interface TodoInputProps {
   showTaskInput: boolean;
   setShowTaskInput: (show: boolean) => void;
   handleAddTodo: (taskTitle: string, deadline: string, recurring?: string, project?: string, priority?: number) => void;
-  activeView: ViewType; // Add activeView prop
+  activeView: ViewType; 
   activeProject: string | null;
 }
 
-// Define the interface for our parsed preview
 interface ParsedPreview {
   title: string;
   date: string;
@@ -34,13 +33,12 @@ const TodoInput: React.FC<TodoInputProps> = ({
   showTaskInput,
   setShowTaskInput,
   handleAddTodo,
-  activeView, // Use activeView prop
+  activeView, 
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [parsedPreview, setParsedPreview] = useState<ParsedPreview | null>(null);
   const [nlpEnabled, setNlpEnabled] = useState(true);
   
-  // State for traditional input fields
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [priority, setPriority] = useState<number>(4);
@@ -52,7 +50,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Set initial project based on activeView
   useEffect(() => {
     if (activeView === 'project-personal') {
       setProject("Personal");
@@ -87,7 +84,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expanded]);
 
-  // Recognizing recurring task patterns
   const recurringPatterns: { [key: string]: string } = {
     "every day": "daily",
     "everyday": "daily",
@@ -107,7 +103,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     "every sunday": "weekly",
   };
 
-  // Recognizing project patterns
   const projectPatterns: { [key: string]: string } = {
     "#work": "Work",
     "#personal": "Personal",
@@ -119,18 +114,15 @@ const TodoInput: React.FC<TodoInputProps> = ({
     "for health": "Health",
   };
 
-  // Update preview as user types
   const updatePreview = (input: string) => {
     if (!input.trim() || !nlpEnabled) {
       setParsedPreview(null);
       return;
     }
 
-    // Process input to detect task, date, and metadata
     const processedInput = processInput(input);
     setParsedPreview(processedInput);
 
-    // Update UI state based on parsed input
     if (processedInput.date) {
       setDeadline(new Date(processedInput.date));
     }
@@ -145,7 +137,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     let detectedProject = "";
     let textWithoutMetadata = input;
   
-    // Process recurring patterns
     for (const pattern in recurringPatterns) {
       if (input.toLowerCase().includes(pattern)) {
         detectedRecurring = recurringPatterns[pattern];
@@ -154,7 +145,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
       }
     }
   
-    // Process project tags
     for (const pattern in projectPatterns) {
       if (input.toLowerCase().includes(pattern)) {
         detectedProject = projectPatterns[pattern];
@@ -179,9 +169,8 @@ const TodoInput: React.FC<TodoInputProps> = ({
     const dateText = dateResult.text;
     let parsedDate = dateResult.start.date();
   
-    // Ensure correct weekday parsing
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayOfWeek = today.getDay(); 
     const lowerInput = textWithoutMetadata.toLowerCase();
     const weekdays = [
       { name: "sunday", index: 0 },
@@ -197,17 +186,15 @@ const TodoInput: React.FC<TodoInputProps> = ({
       if (lowerInput.includes(day.name)) {
         let daysToAdd = (day.index - dayOfWeek + 7) % 7;
   
-        // Ensure we never go backwards in time
         if (daysToAdd === 0 && parsedDate < today) {
-          daysToAdd = 7; // Move to next week's occurrence
+          daysToAdd = 7; 
         }
   
         parsedDate = new Date(today);
         parsedDate.setDate(today.getDate() + daysToAdd);
   
-        // Preserve the parsed time (e.g., 3 PM stays 3 PM)
         parsedDate.setHours(
-          dateResult.start.get("hour") ?? 9, // Default to 9 AM if no time is given
+          dateResult.start.get("hour") ?? 9, 
           dateResult.start.get("minute") ?? 0,
           0,
           0
@@ -231,7 +218,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    // Determine project based on activeView if no project is set
     let taskProject = project;
     if (!taskProject) {
       if (activeView === 'project-personal') {
@@ -271,7 +257,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     setDeadline(null);
     setPriority(4);
     
-    // Keep the project set if we're in a project view
     if (!activeView.startsWith('project-')) {
       setProject(null);
     }
@@ -283,7 +268,6 @@ const TodoInput: React.FC<TodoInputProps> = ({
     setShowTaskInput(false);
   };
 
-  // For debugging - show the parsed result to the user
   const formatPreviewDate = (dateString: string) => {
     if (!dateString) return "";
     

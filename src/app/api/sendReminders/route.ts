@@ -31,12 +31,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 🔥 Function to Fetch Tasks, Get User Emails & Send Emails
 const sendReminders = async () => {
   let now = new Date();
   let tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
 
-  // Convert to Firestore Timestamps
   const nowTimestamp = admin.firestore.Timestamp.fromDate(now);
   const tenMinutesLaterTimestamp = admin.firestore.Timestamp.fromDate(tenMinutesLater);
 
@@ -45,9 +43,8 @@ const sendReminders = async () => {
   console.log(`   - 10 MIN LATER: ${tenMinutesLater.toISOString()} (Firestore Timestamp: ${JSON.stringify(tenMinutesLaterTimestamp)})`);
 
   try {
-    // 🔥 Step 1: Fetch Todos Due in Next 10 Minutes
     const snapshot = await db
-      .collection("todos") // ✅ Using the correct collection name
+      .collection("todos") 
       .where("deadline", ">=", nowTimestamp)
       .where("deadline", "<=", tenMinutesLaterTimestamp)
       .get();
@@ -58,13 +55,11 @@ const sendReminders = async () => {
       return { success: true, message: "No todos due in the next 10 minutes." };
     }
 
-    // 📧 Step 2: Fetch User Emails & Send Emails
     const emailPromises = [];
     for (const doc of snapshot.docs) {
       const task = doc.data();
       console.log(`✅ Processing Task: ${task.text} (UserID: ${task.userId})`);
 
-      // 🔥 Fetch User Email from `users` Collection using `userId`
       const userDoc = await db.collection("users").where("uid", "==", task.userId).get();
 
       if (userDoc.empty) {
@@ -75,14 +70,43 @@ const sendReminders = async () => {
       const userEmail = userDoc.docs[0].data().email;
       console.log(`📧 Found User Email: ${userEmail} for UserID: ${task.userId}`);
 
-      // 🔥 Step 3: Send Email Reminder
+      const formattedDate = new Date(task.deadline.seconds * 1000).toLocaleString('en-US', { 
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"Task Reminder" <${process.env.EMAIL_USER}>`,
         to: userEmail,
         subject: `Reminder: ${task.text}`,
-        text: `Hey! Just a reminder that your task "${task.text}" is due at ${new Date(
-          task.deadline.seconds * 1000
-        ).toLocaleString()}.\n\nDon't forget to complete it!`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <div style="background-color: #4a86e8; padding: 15px; border-radius: 5px 5px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 22px;">Task Reminder</h1>
+            </div>
+            <div style="padding: 20px; background-color: #f9f9f9;">
+              <p style="font-size: 16px; color: #333;">Hi there,</p>
+              <p style="font-size: 16px; color: #333;">Just a friendly reminder that your task is due soon:</p>
+              <div style="background-color: white; padding: 15px; border-left: 4px solid #4a86e8; margin: 15px 0;">
+                <h2 style="margin-top: 0; color: #333; font-size: 18px;">${task.text}</h2>
+                <p style="color: #666; margin-bottom: 0;">
+                  <strong>Due:</strong> ${formattedDate}
+                </p>
+              </div>
+              <p style="font-size: 16px; color: #333;">Don't forget to complete it on time!</p>
+              <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                <p style="font-size: 14px; color: #777; margin: 0;">
+                  This is an automated reminder from your task management app.
+                </p>
+              </div>
+            </div>
+          </div>
+        `,
+        text: `Reminder: Your task "${task.text}" is due at ${formattedDate}.\n\nDon't forget to complete it!`,
       };
 
       emailPromises.push(
@@ -102,10 +126,8 @@ const sendReminders = async () => {
   }
 };
 
-// API Route
 export async function GET(req: NextRequest) {
   try {
-    // 🔥 Fetch Tasks, Get Emails, & Send Reminders
     const response = await sendReminders();
     return NextResponse.json(response);
   } catch (error) {
