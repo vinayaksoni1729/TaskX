@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, ListChecks, Star, Tag, Inbox, Clock } from 'lucide-react';
+import { Calendar, ListChecks, Star, Tag, Inbox, Clock, Layers } from 'lucide-react';
 import { ViewType } from '../../Types/types';
 
 interface SidebarProps {
@@ -17,9 +17,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:block w-full md:w-64 flex-shrink-0 bg-black/40 backdrop-blur-sm border-r border-white/10 transition-all duration-300`}>
       <div className="p-4">
         <div className="flex items-center mb-6">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mr-3"></div>
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mr-3 flex items-center justify-center">
+            <Layers size={16} className="text-white" />
+          </div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600">
-            TaskX
+            Command Hub
           </h1>
         </div>
 
@@ -55,7 +57,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           <ul className="space-y-1">
             {[
               { view: 'project-personal', label: 'Personal', color: 'bg-indigo-400' },
-              { view: 'project-work', label: 'Work', color: 'bg-purple-400' }
+              { view: 'project-work', label: 'Work', color: 'bg-purple-400' },
+              { view: 'project-study', label: 'Study', color: 'bg-blue-400' },
+              { view: 'project-health', label: 'Health', color: 'bg-green-400' }
             ].map(({ view, label, color }) => (
               <li key={view}>
                 <button 
