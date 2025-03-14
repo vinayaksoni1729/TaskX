@@ -37,8 +37,6 @@ const sendReminders = async () => {
     
     let now = new Date();
     
-    // Look for tasks due between 9 and 10 minutes from now
-    // This creates a precise window for sending reminders
     let nineMinutesLater = new Date(now.getTime() + 9 * 60 * 1000);
     let tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
 
@@ -49,7 +47,6 @@ const sendReminders = async () => {
     console.log(`   - 9 MIN LATER: ${nineMinutesLater.toISOString()}`);
     console.log(`   - 10 MIN LATER: ${tenMinutesLater.toISOString()}`);
 
-    // 1. First query: Find tasks that are due in the next 9-10 minutes
     const snapshot = await db
       .collection("todos")
       .where("deadline", ">=", nineMinutesLaterTimestamp)
@@ -62,15 +59,12 @@ const sendReminders = async () => {
       return { success: true, message: "No todos due in the target time window." };
     }
 
-    // Track tasks that need reminders
     const tasksToProcess = [];
     
-    // 2. Check each task to see if a reminder has been sent already
     for (const doc of snapshot.docs) {
       const taskId = doc.id;
       const task = doc.data();
       
-      // If reminderSent field doesn't exist or is false
       if (task.reminderSent !== true) {
         tasksToProcess.push({ id: taskId, data: task });
       } else {
@@ -84,13 +78,11 @@ const sendReminders = async () => {
       return { success: true, message: "No new reminders needed." };
     }
 
-    // 3. Process tasks that need reminders
     const emailPromises = [];
     
     for (const { id: taskId, data: task } of tasksToProcess) {
       console.log(`🔄 Processing Task: ${task.text} (UserID: ${task.userId})`);
 
-      // Get user email
       const userDoc = await db.collection("users").where("uid", "==", task.userId).get();
 
       if (userDoc.empty) {
@@ -101,7 +93,6 @@ const sendReminders = async () => {
       const userEmail = userDoc.docs[0].data().email;
       console.log(`📧 Found User Email: ${userEmail} for UserID: ${task.userId}`);
 
-      // Format date with Asia/Kolkata timezone
       const formattedDate = new Date(task.deadline.seconds * 1000).toLocaleString('en-US', { 
         timeZone: 'Asia/Kolkata',
         year: 'numeric',
@@ -111,7 +102,6 @@ const sendReminders = async () => {
         minute: '2-digit'
       });
 
-      // Prepare email
       const mailOptions = {
         from: `"Task Reminder" <${process.env.EMAIL_USER}>`,
         to: userEmail,
@@ -142,14 +132,12 @@ const sendReminders = async () => {
         text: `Reminder: Your task "${task.text}" is due at ${formattedDate}.\n\nDon't forget to complete it!`,
       };
 
-      // Send email and mark as reminded in a transaction
       emailPromises.push(
         transporter
           .sendMail(mailOptions)
           .then(async () => {
             console.log(`✅ Email sent to ${userEmail} for task ${taskId}`);
             
-            // Mark as reminded to prevent duplicate emails
             await db.collection("todos").doc(taskId).update({
               reminderSent: true
             });
@@ -158,16 +146,13 @@ const sendReminders = async () => {
           })
           .catch((error: any) => {
             console.error(`❌ Email failed for ${userEmail}:`, error);
-            // Don't mark as reminded if email fails
             return Promise.reject(error);
           })
       );
     }
 
-    // Wait for all emails to be sent and tasks to be updated
     await Promise.allSettled(emailPromises);
 
-    // Count successful emails
     const sentCount = emailPromises.length;
     
     return { 
@@ -182,13 +167,6 @@ const sendReminders = async () => {
 
 export async function GET(req: NextRequest) {
   try {
-    // Optional API key protection
-    // const { searchParams } = new URL(req.url);
-    // const apiKey = searchParams.get('key');
-    // if (apiKey !== process.env.API_SECRET_KEY) {
-    //   return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
-    // }
-    
     console.log("📣 API endpoint called");
     const response = await sendReminders();
     return NextResponse.json(response);

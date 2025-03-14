@@ -56,7 +56,6 @@ const TodoApp: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Set activeProject based on activeView
   useEffect(() => {
     if (activeView === "project-personal") {
       setActiveProject("Personal");
@@ -69,7 +68,7 @@ const TodoApp: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-
+  
     const q = query(
       collection(firestore, "todos"),
       where("userId", "==", user.uid)
@@ -92,16 +91,18 @@ const TodoApp: React.FC = () => {
             ? new Date(data.deadline.seconds * 1000)
             : undefined,
           recurring: data.recurring || undefined,
+          completedAt: data.completedAt 
+            ? new Date(data.completedAt.seconds * 1000) 
+            : undefined,
         } as Todo;
       });
-
+  
       setTodos(fetchedTodos);
     });
-
+  
     return () => unsubscribe();
   }, [user]);
 
-  // Simplified handleAddTodo to be more consistent
   const handleAddTodo = async (
     taskTitle: string,
     deadline?: string,
@@ -111,13 +112,11 @@ const TodoApp: React.FC = () => {
   ): Promise<void> => {
     if (taskTitle.trim() === "" || !user) return;
 
-    // Use provided project or fallback to activeProject based on activeView
     let todoProject = project;
     if (!todoProject && activeProject) {
       todoProject = activeProject;
     }
 
-    // Create the todo object
     const newTodo: any = {
       text: taskTitle.trim(),
       completed: false,
@@ -126,17 +125,14 @@ const TodoApp: React.FC = () => {
       userId: user.uid,
     };
 
-    // Add project if available
     if (todoProject) {
       newTodo.project = todoProject;
     }
 
-    // Add deadline if available
     if (deadline) {
       newTodo.deadline = new Date(deadline);
     }
 
-    // Add recurring if available
     if (recurring) {
       newTodo.recurring = recurring;
     }
@@ -179,15 +175,25 @@ const TodoApp: React.FC = () => {
 
   const handleToggleTodo = async (id: string): Promise<void> => {
     if (!user) return;
-
+  
     const todoRef = doc(firestore, "todos", id);
     const todoToUpdate = todos.find((todo) => todo.id === id);
-
+  
     if (todoToUpdate) {
       try {
-        await updateDoc(todoRef, {
-          completed: !todoToUpdate.completed,
-        });
+        const newCompletedStatus = !todoToUpdate.completed;
+        
+        const updateData: any = {
+          completed: newCompletedStatus,
+        };
+        
+        if (newCompletedStatus) {
+          updateData.completedAt = new Date();
+        } else {
+          updateData.completedAt = null;
+        }
+        
+        await updateDoc(todoRef, updateData);
       } catch (error) {
         console.error("Error toggling todo: ", error);
       }
@@ -221,7 +227,6 @@ const TodoApp: React.FC = () => {
   };
 
   const filteredTodos = todos.filter((todo) => {
-    // Filter by view type
     if (activeView === "today")
       return (
         isToday(todo.createdAt) ||
@@ -231,13 +236,11 @@ const TodoApp: React.FC = () => {
     if (activeView === "completed") return todo.completed;
     if (activeView === "upcoming") return isUpcoming(todo);
 
-    // The key project filtering logic
     if (activeView === "project-personal") return todo.project === "Personal";
     if (activeView === "project-work") return todo.project === "Work";
     if (activeView === "project-study") return todo.project === "Study";
     if (activeView === "project-health") return todo.project === "Health";
 
-    // For inbox view, show all tasks
     return true;
   });
 

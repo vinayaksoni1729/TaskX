@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Search, X, LogIn, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { getAuth, signOut } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 interface TodoHeaderProps {
   isMobileMenuOpen: boolean;
@@ -8,6 +9,13 @@ interface TodoHeaderProps {
   user: any; 
   onLoginPage: boolean;
   setOnLoginPage: (value: boolean) => void;
+}
+
+interface UserData {
+  username?: string;
+  displayName?: string;
+  email: string;
+  photoURL?: string | null;
 }
 
 const TodoHeader: React.FC<TodoHeaderProps> = ({ 
@@ -18,8 +26,43 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
   setOnLoginPage
 }) => {
   const auth = getAuth();
+  const db = getFirestore();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user?.uid) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            const data = userDoc.data() as UserData;
+            setUserData(data);
+          } else {
+            setUserData({
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUserData({
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          });
+        }
+      } else {
+        setUserData(null);
+      }
+    };
+
+    fetchUserData();
+  }, [user, db]);
 
   const handleLogout = () => {
     signOut(auth);
@@ -42,6 +85,22 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const getDisplayName = () => {
+    if (userData?.username) {
+      return userData.username;
+    } else if (userData?.displayName) {
+      return userData.displayName;
+    } else if (userData?.email) {
+      return userData.email.split('@')[0];
+    }
+    return 'User';
+  };
+
+  const getInitial = () => {
+    const displayName = getDisplayName();
+    return displayName.charAt(0).toUpperCase();
+  };
 
   return (
     <div className="flex items-center justify-between p-4 bg-black/40 backdrop-blur-sm border-b border-white/10 relative z-50">
@@ -76,11 +135,11 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
                 />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
-                  {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  {userData ? getInitial() : user.email.charAt(0).toUpperCase()}
                 </div>
               )}
               <span className="hidden md:block text-sm text-white/90 max-w-24 truncate">
-                {user.displayName || user.email.split('@')[0]}
+                {userData ? getDisplayName() : user.email.split('@')[0]}
               </span>
               <ChevronDown size={16} className={`text-white/70 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -88,8 +147,15 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
             {isProfileMenuOpen && (
               <div className="fixed right-4 mt-2 w-48 bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 overflow-hidden z-[100]">
                 <div className="p-3 border-b border-gray-700">
-                  <p className="text-white font-medium truncate">{user.displayName || 'User'}</p>
-                  <p className="text-gray-400 text-xs truncate">{user.email}</p>
+                  <p className="text-white font-medium truncate">
+                    {userData?.displayName || getDisplayName()}
+                  </p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {userData?.username && `@${userData.username}`}
+                  </p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {userData?.email || user.email}
+                  </p>
                 </div>
                 <div className="p-1">
                   <button className="flex items-center space-x-2 w-full text-left p-2 hover:bg-white/10 rounded-md text-sm text-white/80 hover:text-white transition-colors">
@@ -125,4 +191,4 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
   );
 };
 
-export default TodoHeader;  
+export default TodoHeader;

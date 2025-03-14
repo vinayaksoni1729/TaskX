@@ -6,7 +6,8 @@ export interface Todo {
   priority: number;
   userId: string;
   project?: string;
-  deadline?: Date;  // Add deadline field
+  deadline?: Date;
+  recurring?: string;
+  completedAt?: Date; // Add this new field
 }
-
 export type ViewType = 'inbox' | 'today' | 'important' | 'completed' | 'upcoming' | string;

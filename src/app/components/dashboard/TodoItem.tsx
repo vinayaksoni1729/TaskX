@@ -130,6 +130,18 @@ const TodoItem: React.FC<TodoItemProps> = ({
                 {isDeadlinePast() && !todo.completed && <span className="ml-1 font-semibold animate-pulse">(overdue)</span>}
               </div>
             )}
+            
+            {todo.completed && todo.completedAt && (
+              <div className="mt-1 text-xs flex items-center text-green-400">
+                <CheckCircle size={12} className="mr-1" />
+                Completed on {todo.completedAt.toLocaleString([], {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            )}
           </div>
           
           {todo.project && (
