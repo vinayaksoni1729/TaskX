@@ -8,6 +8,6 @@ export interface Todo {
   project?: string;
   deadline?: Date;
   recurring?: string;
-  completedAt?: Date; // Add this new field
+  completedAt?: Date;
 }
 export type ViewType = 'inbox' | 'today' | 'important' | 'completed' | 'upcoming' | string;
