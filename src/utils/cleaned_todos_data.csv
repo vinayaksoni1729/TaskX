@@ -1,0 +1,37 @@
+text,hinderStomper,completed,priority,project,recurring,createdAt,completedAt
+septhrep,TRUE,TRUE,high,personal,TRUE,52:05.0,1.74396E+18
+test mail,TRUE,TRUE,medium,work,FALSE,50:12.9,1.74352E+18
+imp work,TRUE,FALSE,high,work,FALSE,44:33.1,1.74396E+18
+cricket match,TRUE,TRUE,low,personal,TRUE,02:16.4,1.74273E+18
+task check,TRUE,TRUE,medium,work,FALSE,12:15.8,1.74392E+18
+doctor appointment,FALSE,FALSE,high,personal,FALSE,14:03.9,1.74392E+18
+compiler design assignment,FALSE,FALSE,medium,school,FALSE,01:39.6,1.745E+18
+submit project,TRUE,TRUE,high,school,FALSE,24:38.5,1.745E+18
+add new report,TRUE,FALSE,low,work,FALSE,06:11.6,1.745E+18
+my appointment,FALSE,FALSE,medium,personal,TRUE,16:41.0,1.74233E+18
+test mail,TRUE,TRUE,high,work,FALSE,05:48.5,1.74233E+18
+new task,TRUE,TRUE,low,work,FALSE,04:50.6,1.7458E+18
+dentist appointment,TRUE,FALSE,high,personal,TRUE,24:57.7,1.7458E+18
+sample todo task,FALSE,FALSE,low,personal,FALSE,53:27.3,1.7452E+18
+imp resume,TRUE,TRUE,high,personal,FALSE,35:13.4,1.7452E+18
+work2,FALSE,FALSE,medium,work,FALSE,04:58.1,1.74504E+18
+septhrep,TRUE,TRUE,high,personal,FALSE,07:20.8,1.74504E+18
+project review,FALSE,FALSE,medium,work,FALSE,48:47.0,1.74504E+18
+prj3,FALSE,FALSE,low,work,TRUE,31:28.1,1.74573E+18
+septhrep new,TRUE,TRUE,high,personal,FALSE,44:43.2,1.74573E+18
+prj1,FALSE,FALSE,medium,work,TRUE,18:35.0,1.74573E+18
+prj2,FALSE,FALSE,low,work,TRUE,24:49.9,1.74451E+18
+project work today?,TRUE,TRUE,high,work,FALSE,54:21.0,1.74451E+18
+one task add,FALSE,FALSE,medium,personal,TRUE,09:54.2,1.74451E+18
+task11,TRUE,TRUE,high,work,FALSE,21:06.2,1.74287E+18
+work1,FALSE,FALSE,low,work,TRUE,08:53.9,1.74287E+18
+extra class,TRUE,TRUE,high,school,FALSE,14:30.6,1.74256E+18
+task1,TRUE,TRUE,medium,work,FALSE,36:40.0,1.74556E+18
+work,TRUE,TRUE,high,work,FALSE,40:03.6,1.74245E+18
+task1,TRUE,TRUE,low,work,FALSE,28:28.7,1.74558E+18
+work1,FALSE,FALSE,medium,work,TRUE,50:15.0,1.74558E+18
+cricket match,TRUE,TRUE,high,personal,FALSE,43:59.7,1.74238E+18
+test task,FALSE,FALSE,low,personal,TRUE,47:26.6,1.74238E+18
+work1,FALSE,FALSE,medium,work,TRUE,54:46.8,1.74238E+18
+class2,TRUE,FALSE,high,school,FALSE,09:39.9,1.74238E+18
+dentist appointment,TRUE,FALSE,low,personal,TRUE,03:45.6,1.74238E+18
